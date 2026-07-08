@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cercanos — Admin</title>
+<style>
+  :root{ --bg:#0f2b3d; --panel:#1b4560; --accent:#ff8a65; --text:#f4f6f5; --muted:#9fb7c4; --line:rgba(255,255,255,0.10); }
+  *{box-sizing:border-box;}
+  body{ margin:0; background:var(--bg); color:var(--text); font-family:'Segoe UI',Arial,sans-serif; padding:24px; }
+  h1{ font-size:20px; margin:0 0 18px; }
+  .card{ background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:20px; max-width:960px; margin:0 auto 20px; }
+  input{ background:#102b3d; border:1px solid var(--line); color:var(--text); padding:10px 14px; border-radius:8px; font-size:14px; width:260px; }
+  button{ background:var(--accent); border:none; color:#1a0e06; font-weight:700; padding:10px 18px; border-radius:8px; font-size:14px; cursor:pointer; margin-left:8px; }
+  table{ width:100%; border-collapse:collapse; font-size:13px; margin-top:10px; }
+  th,td{ text-align:left; padding:8px 10px; border-bottom:1px solid var(--line); }
+  th{ color:var(--muted); font-weight:600; text-transform:uppercase; font-size:11px; }
+  .pill{ padding:2px 8px; border-radius:20px; font-size:11px; font-weight:700; }
+  .pill.banned{ background:rgba(227,72,72,0.2); color:#ff8a8a; }
+  .pill.active{ background:rgba(126,225,255,0.15); color:#7ee1ff; }
+  .pill.pending{ background:rgba(255,209,102,0.15); color:#ffd166; }
+  .err{ color:#ff8a8a; font-size:13px; margin-top:10px; }
+  .ban-btn{ background:transparent; border:1px solid var(--accent); color:var(--accent); padding:4px 10px; font-size:11px; margin:0; }
+  .tabs{ display:flex; gap:8px; margin-bottom:14px; }
+  .tab{ background:transparent; border:1px solid var(--line); color:var(--muted); padding:6px 14px; border-radius:20px; font-size:12px; font-weight:600; margin:0; }
+  .tab.active{ background:var(--accent); color:#1a0e06; border-color:var(--accent); }
+</style>
+</head>
+<body>
+  <h1>Cercanos — Panel de administrador</h1>
+
+  <div class="card" id="loginCard">
+    <label style="font-size:13px; color:var(--muted); display:block; margin-bottom:8px;">Clave de administrador (ADMIN_KEY)</label>
+    <input type="password" id="adminKey" placeholder="Pega tu ADMIN_KEY">
+    <button id="loadBtn">Entrar</button>
+    <div class="err" id="err"></div>
+  </div>
+
+  <div class="card" id="dataCard" style="display:none;">
+    <div class="tabs">
+      <button class="tab active" id="tabUsers">Usuarios</button>
+      <button class="tab" id="tabReports">Reportes</button>
+    </div>
+    <div id="usersView"></div>
+    <div id="reportsView" style="display:none;"></div>
+  </div>
+
+<script>
+  let adminKey = '';
+
+  document.getElementById('loadBtn').onclick = async () => {
+    adminKey = document.getElementById('adminKey').value.trim();
+    if(!adminKey) return;
+    await loadUsers();
+  };
+
+  async function apiGet(path){
+    const res = await fetch(path + (path.includes('?') ? '&' : '?') + 'key=' + encodeURIComponent(adminKey));
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.error || 'Error');
+    return data;
+  }
+
+  async function loadUsers(){
+    const err = document.getElementById('err');
+    err.textContent = '';
+    try{
+      const data = await apiGet('/api/admin/users');
+      document.getElementById('loginCard').style.display = 'none';
+      document.getElementById('dataCard').style.display = 'block';
+      renderUsers(data.users);
+    }catch(e){ err.textContent = e.message; }
+  }
+
+  function renderUsers(users){
+    const el = document.getElementById('usersView');
+    el.innerHTML = `
+      <p style="color:var(--muted); font-size:13px; margin-bottom:10px;">${users.length} usuario(s) registrado(s)</p>
+      <table>
+        <tr><th>Nombre</th><th>Email</th><th>Edad</th><th>Distrito</th><th>Género</th><th>Foto</th><th>Registro</th><th>Estado</th><th></th></tr>
+        ${users.map(u => `
+          <tr>
+            <td>${escapeHtml(u.name)}</td>
+            <td>${escapeHtml(u.email || '—')}</td>
+            <td>${u.age || '—'}</td>
+            <td>${escapeHtml(u.district || '—')}</td>
+            <td>${escapeHtml(u.gender || '—')}</td>
+            <td>${u.hasPhoto ? 'Sí' : 'No'}</td>
+            <td>${u.signupMethod}</td>
+            <td>
+              ${u.isBanned ? '<span class="pill banned">Suspendido</span>' : (u.needsProfile ? '<span class="pill pending">Incompleto</span>' : '<span class="pill active">Activo</span>')}
+            </td>
+            <td><button class="ban-btn" data-id="${u.id}" data-banned="${u.isBanned}">${u.isBanned ? 'Reactivar' : 'Suspender'}</button></td>
+          </tr>
+        `).join('')}
+      </table>
+    `;
+    el.querySelectorAll('.ban-btn').forEach(btn => {
+      btn.onclick = async () => {
+        const banned = btn.dataset.banned !== 'true';
+        await fetch('/api/admin/ban?key=' + encodeURIComponent(adminKey), {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: btn.dataset.id, banned })
+        });
+        loadUsers();
+      };
+    });
+  }
+
+  async function loadReports(){
+    try{
+      const data = await apiGet('/api/admin/reports');
+      const el = document.getElementById('reportsView');
+      if(data.reports.length === 0){
+        el.innerHTML = '<p style="color:var(--muted); font-size:13px;">No hay reportes.</p>';
+        return;
+      }
+      el.innerHTML = `
+        <table>
+          <tr><th>Reportado</th><th>Motivo</th><th>Fecha</th></tr>
+          ${data.reports.map(r => `<tr><td>${escapeHtml(r.reported_id)}</td><td>${escapeHtml(r.reason)}</td><td>${new Date(r.created_at).toLocaleString()}</td></tr>`).join('')}
+        </table>
+      `;
+    }catch(e){}
+  }
+
+  document.getElementById('tabUsers').onclick = () => {
+    document.getElementById('tabUsers').classList.add('active');
+    document.getElementById('tabReports').classList.remove('active');
+    document.getElementById('usersView').style.display = 'block';
+    document.getElementById('reportsView').style.display = 'none';
+  };
+  document.getElementById('tabReports').onclick = async () => {
+    document.getElementById('tabReports').classList.add('active');
+    document.getElementById('tabUsers').classList.remove('active');
+    document.getElementById('usersView').style.display = 'none';
+    document.getElementById('reportsView').style.display = 'block';
+    await loadReports();
+  };
+
+  function escapeHtml(s){ return (s||'').toString().replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+</script>
+</body>
+</html>

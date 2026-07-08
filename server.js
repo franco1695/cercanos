@@ -36,6 +36,7 @@ app.use('/api/auth', require('./routes/facebookAuth'));
 app.use('/api/profiles', require('./routes/profiles'));
 app.use('/api/chat', require('./routes/chat'));
 app.use('/api', require('./routes/reports'));
+app.use('/api/admin', require('./routes/admin'));
 
 app.get('/api/health', (req, res) => res.json({ ok: true }));
 

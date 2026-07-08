@@ -107,7 +107,18 @@ Las llamadas usan **WebRTC**: la tecnología que hace que el navegador de dos pe
 - **Limitación a tener en cuenta**: en redes muy restrictivas (algunas redes corporativas, universitarias, o con configuraciones especiales de router), la conexión directa puede fallar. La solución completa a esto es un "servidor TURN", que sí normalmente tiene un costo pequeño (aunque existen opciones gratuitas limitadas, como el plan gratuito de Twilio o metered.ca, por si más adelante quieres una tasa de éxito de conexión más alta). Por ahora, dejamos la versión 100% gratuita.
 - **Si usas el plan Free de Render**: el servicio "se duerme" tras ~15 minutos sin visitas, y despertarlo toma unos segundos. Mientras está dormido, nadie puede recibir llamadas (ni mensajes en tiempo real). En cuanto alguien abre la app, el servidor despierta solo.
 
-## 5. Conectar tu propio dominio
+## 5. Ver quién se registró (panel de administrador)
+
+Como no usamos una base de datos con interfaz propia, agregamos una página simple para que tú (y solo tú) puedas ver los usuarios registrados, sus datos básicos, y suspender cuentas si hace falta.
+
+1. En Render, agrega una variable de entorno nueva:
+   - `ADMIN_KEY` = una clave larga e inventada por ti (trátala como una contraseña — cualquiera que la tenga puede ver los datos de tus usuarios).
+2. Abre en tu navegador: `https://TU-URL-DE-RENDER.onrender.com/admin.html`
+3. Pega ahí tu `ADMIN_KEY` y dale "Entrar".
+
+Vas a ver una tabla con nombre, email, edad, distrito, género, si subieron foto, y si se registraron por email o Facebook — además de un botón para suspender o reactivar cualquier cuenta, y una pestaña con los reportes recibidos.
+
+## 6. Conectar tu propio dominio
 
 Una vez desplegado, la mayoría de hostings (Render incluido) te permiten agregar un dominio propio desde su panel, apuntando los DNS de tu dominio (comprado en NameCheap, GoDaddy, etc.) hacia la URL que te dieron.
 

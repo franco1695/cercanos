@@ -56,6 +56,9 @@ module.exports = {
   allActiveUsers() {
     return state.users.filter(u => !u.is_banned);
   },
+  allUsersRaw() {
+    return state.users;
+  },
 
   insertMessage(msg) {
     state.messages.push(msg);
@@ -104,5 +107,8 @@ module.exports = {
   distinctReporterCount(reportedId) {
     const reporters = new Set(state.reports.filter(r => r.reported_id === reportedId).map(r => r.reporter_id));
     return reporters.size;
+  },
+  allReportsRaw() {
+    return state.reports.slice().sort((a, b) => b.created_at - a.created_at);
   },
 };
